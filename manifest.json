@@ -1,0 +1,22 @@
+{
+  "name": "jeb - Personal Financial Tracker",
+  "short_name": "jeb",
+  "description": "Smart, session-based personal finance and loan tracking application.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f0f8ff",
+  "icons": [
+    {
+      "src": "./asset/icons/192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./asset/icons/512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

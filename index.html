@@ -1,0 +1,1441 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>jeb - Personal Financial Tracker</title>
+    <link
+      rel="shortcut icon"
+      href="./asset/icons/favicon.ico"
+      type="image/x-icon"
+    />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#f0f8ff" />
+    <link rel="stylesheet" href="proto.css" />
+  </head>
+
+  <body>
+    <!-- PIN LOCK OVERLAY SCREEN -->
+    <div class="pin-lock-overlay" id="pinLockOverlay">
+      <div class="pin-lock-card">
+        <div class="pin-lock-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-shield-icon lucide-shield"
+          >
+            <path
+              d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+            />
+          </svg>
+        </div>
+        <div class="pin-lock-title" data-i18n="enterSecurityPin">
+          Enter Security PIN
+        </div>
+        <div class="pin-dots-container" id="pinDotsContainer">
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+        </div>
+        <div class="pin-keypad">
+          <button type="button" class="pin-key" data-num="1">1</button>
+          <button type="button" class="pin-key" data-num="2">2</button>
+          <button type="button" class="pin-key" data-num="3">3</button>
+          <button type="button" class="pin-key" data-num="4">4</button>
+          <button type="button" class="pin-key" data-num="5">5</button>
+          <button type="button" class="pin-key" data-num="6">6</button>
+          <button type="button" class="pin-key" data-num="7">7</button>
+          <button type="button" class="pin-key" data-num="8">8</button>
+          <button type="button" class="pin-key" data-num="9">9</button>
+          <button type="button" class="pin-key action" id="pinClearBtn">
+            C
+          </button>
+          <button type="button" class="pin-key" data-num="0">0</button>
+          <button type="button" class="pin-key action" id="pinBackspaceBtn">
+            ⌫
+          </button>
+        </div>
+        <button
+          type="button"
+          class="pin-biometric-btn"
+          id="pinBiometricBtn"
+          style="
+            display: none;
+            margin-top: 12px;
+            padding: 10px;
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border-color, #ccc);
+            background: var(--card-bg, #fff);
+            cursor: pointer;
+            font-weight: 600;
+          "
+        >
+          <span data-i18n="useBiometrics">☝️ Use Biometrics / Fingerprint</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- FIRST-RUN STARTER PAGE -->
+    <div
+      class="starter-overlay"
+      id="starterOverlay"
+      aria-modal="true"
+      role="dialog"
+    >
+      <div class="starter-card">
+        <div class="starter-mark">jeb</div>
+        <h1 data-i18n="firstRunTitle">Let’s set up jeb</h1>
+        <p data-i18n="firstRunIntro">
+          A few details will personalize your tracker. You can change them later
+          in Settings.
+        </p>
+
+        <form id="starterForm" onsubmit="return false;">
+          <label class="starter-field">
+            <span data-i18n="yourName">Your name</span>
+            <input id="starterNameInput" type="text" autocomplete="name" />
+            <small data-i18n="yourNameHint"
+              >Used for your greeting (optional)</small
+            >
+          </label>
+          <label class="starter-field">
+            <span><b data-i18n="mainWallet">Main wallet</b> *</span>
+            <input id="starterWalletInput" type="text" value="Cash" required />
+          </label>
+          <label class="starter-field">
+            <span data-i18n="openingBalance">Opening balance</span>
+            <input
+              id="starterBalanceInput"
+              type="number"
+              min="0"
+              step="any"
+              placeholder="0"
+            />
+            <small data-i18n="openingBalanceHint"
+              >The amount currently in this wallet</small
+            >
+          </label>
+          <div class="starter-row">
+            <label class="starter-field">
+              <span data-i18n="currencySymbol">Currency Symbol</span>
+              <input
+                id="starterCurrencyInput"
+                type="text"
+                value="৳"
+                maxlength="5"
+              />
+            </label>
+            <label class="starter-field">
+              <span data-i18n="language">Language</span>
+              <select id="starterLanguageSelect">
+                <option value="en" data-i18n="english">English</option>
+                <option value="bn" data-i18n="bangla">বাংলা</option>
+              </select>
+            </label>
+          </div>
+          <label class="starter-field">
+            <span data-i18n="protection">Quick protection</span>
+            <small data-i18n="protectionHint"
+              >Choose how jeb should lock when you leave it.</small
+            >
+            <select id="starterProtectionSelect">
+              <option value="pin" data-i18n="pinProtection">4-digit PIN</option>
+              <option value="biometrics" data-i18n="biometricProtection">
+                Biometrics
+              </option>
+            </select>
+          </label>
+          <div class="starter-pin-fields" id="starterPinFields">
+            <label class="starter-field">
+              <span data-i18n="setupPin">Create a 4-digit PIN</span>
+              <input
+                id="starterPinInput"
+                type="password"
+                inputmode="numeric"
+                maxlength="4"
+                autocomplete="new-password"
+              />
+            </label>
+            <label class="starter-field">
+              <span data-i18n="confirmPin">Confirm PIN</span>
+              <input
+                id="starterPinConfirmInput"
+                type="password"
+                inputmode="numeric"
+                maxlength="4"
+                autocomplete="new-password"
+              />
+            </label>
+          </div>
+          <div
+            class="starter-error"
+            id="starterError"
+            role="alert"
+            aria-live="polite"
+          ></div>
+          <button
+            class="btn-primary starter-submit"
+            id="starterSubmitBtn"
+            type="submit"
+            data-i18n="startUsingJeb"
+          >
+            Start using jeb
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Header Bar -->
+    <div class="header-actions">
+      <button
+        class="icon-btn floating-action"
+        id="lockAppBtn"
+        title="Lock app"
+        aria-label="Lock app"
+        data-i18n-title="lockApp"
+        data-i18n-aria-label="lockApp"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect width="16" height="11" x="4" y="11" rx="2" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+      </button>
+      <button
+        class="icon-btn floating-action"
+        id="openMenuBtn"
+        title="Menu"
+        aria-label="Open menu"
+        data-i18n-title="menu"
+        data-i18n-aria-label="openMenu"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+          />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      </button>
+    </div>
+    <header class="app-header">
+      <div class="greeting" id="greetingText">Good morning</div>
+    </header>
+
+    <!-- Main View Container -->
+    <div class="tab home">
+      <!-- Dashboard Card -->
+      <div class="dashboard">
+        <div class="dash-header">
+          <button class="dash-balance-dropdown" id="dashWalletDropdownBtn">
+            <span id="dashWalletTitle" data-i18n="mainWalletBalance"
+              >Main Wallet Balance</span
+            >
+            <span class="drop-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+          </button>
+
+          <button
+            class="dash-summary"
+            id="dashSummaryBtn"
+            title="Session Summary"
+            data-i18n-title="sessionSummary"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M15 4H7" />
+              <path d="m18 16 3 3-3 3" />
+              <path d="M3 4v13a2 2 0 0 0 2 2h16" />
+              <path d="M7 14h7" />
+              <path d="M7 9h12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="dash-balance-amount" id="dashBalanceAmount">৳0</div>
+
+        <div class="dash-other-amount-container">
+          <div class="dash-amount-item expense">
+            <div class="dash-amount-label" data-i18n="expense">Expense</div>
+            <div class="dash-sec-amount" id="dashExpenseAmount">৳0</div>
+          </div>
+          <div class="dash-amount-item payable">
+            <div class="dash-amount-label" data-i18n="payable">Payable</div>
+            <div class="dash-sec-amount" id="dashPayableAmount">৳0</div>
+          </div>
+          <div class="dash-amount-item receivable">
+            <div class="dash-amount-label" data-i18n="receivable">
+              Receivable
+            </div>
+            <div class="dash-sec-amount" id="dashReceivableAmount">৳0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transaction History Section -->
+      <div class="transaction-history">
+        <div class="th-header">
+          <button class="th-header-dropdown-btn" id="thHeaderSessionBtn">
+            <span
+              class="th-header-text"
+              id="thHeaderSessionText"
+              data-i18n="currentSession"
+              >Current Session</span
+            >
+            <span class="drop-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+          </button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-bar-cont">
+          <input
+            type="text"
+            class="search-inp"
+            id="txSearchInput"
+            placeholder="Search note or category..."
+            data-i18n="searchTransactions"
+          />
+        </div>
+
+        <div class="lc-filter-container">
+          <div class="lc-in-out-selector-group">
+            <div class="selectable in" id="filterInBtn" data-i18n="in">In</div>
+            <div class="selectable out" id="filterOutBtn" data-i18n="out">
+              Out
+            </div>
+            <div
+              class="selector catagory"
+              id="filterCategoryBtn"
+              data-i18n="category"
+            >
+              Category
+            </div>
+          </div>
+          <div class="chip-container" id="activeFilterChips">
+            <!-- Active filter chips appended dynamically -->
+          </div>
+        </div>
+
+        <div class="th-list" id="transactionHistoryList">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: WALLETS -->
+    <div class="floating-tab wallets" id="walletsTabModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div class="wh-text" data-i18n="wallets">Wallets</div>
+        </div>
+
+        <div class="wallets-list" id="walletsListContainer">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: LOANS -->
+    <div class="floating-tab loans" id="loansTabModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div class="wh-text" data-i18n="loans">Loans</div>
+        </div>
+
+        <div class="loan-container">
+          <div class="lc-filter-container">
+            <div class="lc-in-out-selector-group">
+              <div class="selectable lent" id="filterLentBtn" data-i18n="lent">
+                Lent
+              </div>
+              <div
+                class="selectable borrowed"
+                id="filterBorrowedBtn"
+                data-i18n="borrowed"
+              >
+                Borrowed
+              </div>
+              <div
+                class="selector person"
+                id="filterPersonBtn"
+                data-i18n="person"
+              >
+                Person
+              </div>
+            </div>
+            <div class="chip-container" id="loanFilterChips">
+              <!-- Active loan chips appended dynamically -->
+            </div>
+          </div>
+
+          <div class="loan-list" id="loanListContainer">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: LOAN DETAILS & TIMELINE -->
+    <div class="floating-tab loan-details-sheet" id="loanDetailsModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div
+            class="wh-text"
+            id="loanDetailsHeaderPerson"
+            data-i18n="loanTimeline"
+          >
+            Loan Timeline
+          </div>
+          <button
+            class="btn-primary-sm"
+            id="loanDetailsRecordRepaymentBtn"
+            data-i18n="addRepayment"
+          >
+            + Repayment
+          </button>
+        </div>
+        <div class="loan-details-summary-card" id="loanDetailsSummaryCard">
+          <!-- Rendered dynamically -->
+        </div>
+        <div class="timeline-title" data-i18n="repaymentHistory">
+          Repayment History Timeline
+        </div>
+        <div class="loan-timeline-list" id="loanTimelineList">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: ADD TRANSACTION -->
+    <div class="floating-tab add-tranction" id="addTransactionModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div class="wh-text" id="addTxModalTitle" data-i18n="addTransaction">
+            Add Transaction
+          </div>
+          <button class="atr-save" id="saveTransactionBtn" title="Save">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </button>
+        </div>
+
+        <form class="atr" id="addTxForm" onsubmit="return false;">
+          <div class="atr-type-group">
+            <button
+              type="button"
+              class="selector atr-tr-type"
+              id="txTypeSelectorBtn"
+              data-i18n="expense"
+            >
+              Expense
+            </button>
+          </div>
+          <div class="atr-amount-inp-cont">
+            <input
+              placeholder="0"
+              class="atr-amount"
+              id="txAmountInput"
+              type="number"
+              step="any"
+              required
+            />
+          </div>
+          <div class="atr-ot-sel-group">
+            <button
+              type="button"
+              class="selector tr-type"
+              id="txCategorySelectorBtn"
+              data-i18n="category"
+            >
+              Category
+            </button>
+            <button
+              type="button"
+              class="selector tr-type"
+              id="txWalletSelectorBtn"
+              data-i18n="wallet"
+            >
+              Wallet
+            </button>
+            <button
+              type="button"
+              class="selector tr-type"
+              id="txTargetWalletSelectorBtn"
+              data-i18n="targetWallet"
+              style="display: none"
+            >
+              Target Wallet
+            </button>
+            <button
+              type="button"
+              class="selector tr-type"
+              id="txDateTimeBtn"
+              data-i18n="today"
+            >
+              Today
+            </button>
+            <input
+              type="datetime-local"
+              id="txDateTimeInput"
+              style="display: none"
+            />
+          </div>
+          <div
+            class="transfer-fee-row"
+            id="transferFeeRow"
+            style="display: none"
+          >
+            <span class="tf-label"
+              ><span data-i18n="transferFee">Transfer Fee</span>: ৳</span
+            >
+            <input
+              type="number"
+              step="any"
+              class="tf-inp"
+              id="txFeeInput"
+              placeholder="0"
+            />
+          </div>
+          <textarea
+            id="txNoteInput"
+            class="atr-note"
+            rows="2"
+            placeholder="Write details about this transaction..."
+            data-i18n="writeDetails"
+          ></textarea>
+        </form>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: ADD WALLET -->
+    <div class="floating-tab add-wallet" id="addWalletModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div class="wh-text" data-i18n="addWallet">Add Wallet</div>
+          <button class="atr-save" id="saveWalletBtn" title="Save">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </button>
+        </div>
+
+        <form class="awl" id="addWalletForm" onsubmit="return false;">
+          <div class="awl-description" data-i18n="initialAmountDesc">
+            Enter wallet name and initial amount. You can keep amount empty if
+            initial balance is zero.
+          </div>
+          <div class="awl-inp-container">
+            <div class="awl-name-inp-cont">
+              <input
+                placeholder="side wallet"
+                id="walletTitleInput"
+                class="atr-amount"
+                type="text"
+                required
+                data-i18n="walletName"
+              />
+            </div>
+            <div class="atr-amount-inp-cont">
+              <input
+                placeholder="0"
+                id="walletInitialAmountInput"
+                class="atr-amount"
+                type="number"
+                step="any"
+              />
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: ADD LOAN -->
+    <div class="floating-tab add-loan" id="addLoanModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div class="wh-text" data-i18n="addLoan">Add Loan</div>
+          <button class="atr-save" id="saveLoanBtn" title="Save">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </button>
+        </div>
+
+        <form class="atr" id="addLoanForm" onsubmit="return false;">
+          <div class="atr-type-group">
+            <button
+              type="button"
+              class="selector atr-tr-type"
+              id="loanTypeSelectorBtn"
+              data-i18n="iLent"
+            >
+              I Lent
+            </button>
+            <button
+              type="button"
+              class="selector atr-tr-type"
+              id="loanPersonSelectorBtn"
+              data-i18n="person"
+            >
+              Person
+            </button>
+          </div>
+          <div class="atr-amount-inp-cont">
+            <input
+              placeholder="0"
+              id="loanAmountInput"
+              class="atr-amount"
+              type="number"
+              step="any"
+              required
+            />
+          </div>
+          <div class="atr-ot-sel-group">
+            <button
+              type="button"
+              class="selector tr-type"
+              id="loanWalletSelectorBtn"
+              data-i18n="wallet"
+            >
+              Wallet
+            </button>
+            <button
+              type="button"
+              class="selector tr-type"
+              id="loanDateTimeBtn"
+              data-i18n="today"
+            >
+              Today
+            </button>
+            <input
+              type="datetime-local"
+              id="loanDateTimeInput"
+              style="display: none"
+            />
+          </div>
+          <textarea
+            id="loanNoteInput"
+            class="atr-note"
+            rows="2"
+            placeholder="Write details about this loan"
+            data-i18n="writeLoanDetails"
+          ></textarea>
+        </form>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: ADD REPAYMENT -->
+    <div class="floating-tab add-repayment" id="addRepaymentModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div
+            class="wh-text"
+            id="repaymentModalTitle"
+            data-i18n="recordLoanRepayment"
+          >
+            Record Loan Repayment
+          </div>
+          <button class="atr-save" id="saveRepaymentBtn" title="Save">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </button>
+        </div>
+
+        <form class="atr" id="addRepaymentForm" onsubmit="return false;">
+          <div class="atr-amount-inp-cont">
+            <input
+              placeholder="0"
+              id="repaymentAmountInput"
+              class="atr-amount"
+              type="number"
+              step="any"
+              required
+            />
+          </div>
+          <div class="atr-ot-sel-group">
+            <button
+              type="button"
+              class="selector tr-type"
+              id="repaymentWalletSelectorBtn"
+              data-i18n="wallet"
+            >
+              Wallet
+            </button>
+            <button
+              type="button"
+              class="selector tr-type"
+              id="repaymentDateTimeBtn"
+              data-i18n="today"
+            >
+              Today
+            </button>
+            <input
+              type="datetime-local"
+              id="repaymentDateTimeInput"
+              style="display: none"
+            />
+          </div>
+          <textarea
+            id="repaymentNoteInput"
+            class="atr-note"
+            rows="2"
+            placeholder="Repayment notes..."
+            data-i18n="repaymentNotes"
+          ></textarea>
+        </form>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: SESSION SUMMARY MODAL -->
+    <div
+      class="floating-tab session-summary session-window"
+      id="sessionSummaryModal"
+    >
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div
+            class="wh-text"
+            id="sessionSummaryTitle"
+            data-i18n="sessionSummary"
+          >
+            Session Summary
+          </div>
+          <button
+            type="button"
+            class="btn-primary-sm"
+            id="sessionStampBtn"
+            data-i18n="stampSession"
+            style="display: none"
+          >
+            Stamp Session
+          </button>
+        </div>
+        <div class="session-window-tabs">
+          <button
+            type="button"
+            class="session-window-tab active"
+            id="sessionWindowSummaryTab"
+            data-i18n="summary"
+          >
+            Summary
+          </button>
+          <button
+            type="button"
+            class="session-window-tab"
+            id="sessionWindowHistoryTab"
+            data-i18n="sessionHistory"
+          >
+            History
+          </button>
+        </div>
+        <div class="summary-details-container" id="sessionSummaryContent">
+          <!-- Rendered dynamically -->
+        </div>
+        <div
+          class="session-window-history"
+          id="sessionWindowHistoryContent"
+          style="display: none"
+        ></div>
+      </div>
+    </div>
+
+    <!-- QUICK MENU -->
+    <div class="floating-tab quick-menu" id="quickMenuModal">
+      <div class="ft-content-container">
+        <div class="wallets-header">
+          <div class="wh-text" data-i18n="menu">Menu</div>
+        </div>
+        <div class="quick-menu-actions">
+          <button
+            type="button"
+            class="btn-secondary"
+            id="quickSettingsBtn"
+            data-i18n="settings"
+          >
+            Settings
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            id="quickCategoriesBtn"
+            data-i18n="categories"
+          >
+            Categories
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            id="quickPersonsBtn"
+            data-i18n="contacts"
+          >
+            Contacts
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            id="quickHealthBtn"
+            data-i18n="healthCheck"
+          >
+            Health Check
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            id="quickLanguageBtn"
+            data-i18n="languageToggle"
+          >
+            বাংলা / English
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: SESSIONS MANAGER MODAL -->
+    <div class="floating-tab sessions-manager" id="sessionsManagerModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div class="wh-text" data-i18n="sessionsPeriods">
+            Sessions & Periods
+          </div>
+          <button
+            class="btn-primary-sm"
+            id="createNewSessionBtn"
+            data-i18n="newSession"
+          >
+            + New Session
+          </button>
+        </div>
+        <div class="sessions-list" id="sessionsListContainer">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: CATEGORY MANAGER MODAL -->
+    <div class="floating-tab category-manager" id="categoryManagerModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div class="wh-text" data-i18n="manageCategories">
+            Manage Categories
+          </div>
+          <button
+            class="btn-primary-sm"
+            id="addCategoryManagerBtn"
+            data-i18n="addCategory"
+          >
+            + Category
+          </button>
+        </div>
+        <div class="entity-list" id="categoryManagerListContainer">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: PERSON MANAGER MODAL -->
+    <div class="floating-tab person-manager" id="personManagerModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div class="wh-text" data-i18n="manageContacts">
+            Manage Person Contacts
+          </div>
+          <button
+            class="btn-primary-sm"
+            id="addPersonManagerBtn"
+            data-i18n="addPerson"
+          >
+            + Person
+          </button>
+        </div>
+        <div class="entity-list" id="personManagerListContainer">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: SETTINGS MODAL -->
+    <div class="floating-tab settings-sheet" id="settingsModal">
+      <div class="ft-content-container">
+        <div class="wallets-header">
+          <div class="wh-text" data-i18n="settingsSecurity">
+            Settings & Security
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="setting-item">
+            <div class="setting-label" data-i18n="defaultMainWallet">
+              Default Main Wallet
+            </div>
+            <button
+              type="button"
+              class="selector"
+              id="settingsDefaultWalletBtn"
+              data-i18n="selectWallet"
+            >
+              Select Wallet
+            </button>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label" data-i18n="currencySymbol">
+              Currency Symbol
+            </div>
+            <button type="button" class="selector" id="settingsCurrencyBtn">
+              ৳
+            </button>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label" data-i18n="theme">Theme</div>
+            <button type="button" class="selector" id="settingsThemeBtn">
+              System
+            </button>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label" data-i18n="appPinSecurity">
+              App PIN Security
+            </div>
+            <button
+              type="button"
+              class="selector"
+              id="settingsPinBtn"
+              data-i18n="disabled"
+            >
+              Disabled
+            </button>
+          </div>
+          <div class="setting-item" id="changePinRow" style="display: none">
+            <div class="setting-label" data-i18n="securityPin">
+              Security PIN
+            </div>
+            <button
+              type="button"
+              class="btn-secondary"
+              id="changePinBtn"
+              data-i18n="changePin"
+            >
+              Change PIN
+            </button>
+          </div>
+          <div class="setting-item-col">
+            <div class="setting-label" data-i18n="entityManagement">
+              Entity Management
+            </div>
+            <div class="btn-group-row">
+              <button
+                type="button"
+                class="btn-secondary"
+                id="openCategoryManagerBtn"
+                data-i18n="categories"
+              >
+                Categories
+              </button>
+              <button
+                type="button"
+                class="btn-secondary"
+                id="openPersonManagerBtn"
+                data-i18n="contacts"
+              >
+                Contacts
+              </button>
+            </div>
+          </div>
+          <div class="setting-item-col">
+            <div class="setting-label" data-i18n="databaseHealth">
+              Database & Health
+            </div>
+            <div class="btn-group-row">
+              <button
+                type="button"
+                class="btn-secondary"
+                id="runHealthCheckBtn"
+                data-i18n="runHealthCheck"
+              >
+                Run Health Check
+              </button>
+              <button
+                type="button"
+                class="btn-secondary"
+                id="exportDbBtn"
+                data-i18n="exportJson"
+              >
+                Export JSON
+              </button>
+              <button
+                type="button"
+                class="btn-secondary"
+                id="importDbBtn"
+                data-i18n="importJson"
+              >
+                Import JSON
+              </button>
+              <button
+                type="button"
+                class="btn-danger"
+                id="wipeDbBtn"
+                data-i18n="resetApp"
+              >
+                Reset App
+              </button>
+            </div>
+            <input
+              type="file"
+              id="importFileInput"
+              accept=".json"
+              style="display: none"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: EDIT TRANSACTION -->
+    <div class="floating-tab edit-transaction" id="editTransactionModal">
+      <div class="ft-content-container">
+        <div class="wallets-header with-button">
+          <div
+            class="wh-text"
+            id="editTxModalTitle"
+            data-i18n="editTransaction"
+          >
+            Edit Transaction
+          </div>
+          <button class="atr-save" id="saveEditTransactionBtn" title="Save">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </button>
+        </div>
+
+        <form class="atr" id="editTxForm" onsubmit="return false;">
+          <input type="hidden" id="editTxIdInput" />
+          <div class="atr-type-group">
+            <button
+              type="button"
+              class="selector atr-tr-type"
+              id="editTxTypeSelectorBtn"
+              data-i18n="expense"
+            >
+              Expense
+            </button>
+          </div>
+          <div class="atr-amount-inp-cont">
+            <input
+              placeholder="0"
+              class="atr-amount"
+              id="editTxAmountInput"
+              type="number"
+              step="any"
+              required
+            />
+          </div>
+          <div class="atr-ot-sel-group">
+            <button
+              type="button"
+              class="selector tr-type"
+              id="editTxCategorySelectorBtn"
+              data-i18n="category"
+            >
+              Category
+            </button>
+            <button
+              type="button"
+              class="selector tr-type"
+              id="editTxWalletSelectorBtn"
+              data-i18n="wallet"
+            >
+              Wallet
+            </button>
+            <button
+              type="button"
+              class="selector tr-type"
+              id="editTxTargetWalletSelectorBtn"
+              data-i18n="targetWallet"
+              style="display: none"
+            >
+              Target Wallet
+            </button>
+            <button
+              type="button"
+              class="selector tr-type"
+              id="editTxDateTimeBtn"
+              data-i18n="today"
+            >
+              Today
+            </button>
+            <input
+              type="datetime-local"
+              id="editTxDateTimeInput"
+              style="display: none"
+            />
+          </div>
+          <div
+            class="transfer-fee-row"
+            id="editTransferFeeRow"
+            style="display: none"
+          >
+            <span class="tf-label">Transfer Fee: ৳</span>
+            <input
+              type="number"
+              step="any"
+              class="tf-inp"
+              id="editTxFeeInput"
+              placeholder="0"
+            />
+          </div>
+          <textarea
+            id="editTxNoteInput"
+            class="atr-note"
+            rows="2"
+            placeholder="Write details about this transaction..."
+            data-i18n="writeDetails"
+          ></textarea>
+        </form>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: STAGED IMPORT CONFLICT RESOLUTION MODAL -->
+    <div class="floating-tab staged-import" id="stagedImportModal">
+      <div class="ft-content-container">
+        <div class="wallets-header">
+          <div class="wh-text" data-i18n="stagedImport">
+            Import Data & Conflict Resolution
+          </div>
+        </div>
+        <div class="settings-group" style="padding: 16px">
+          <div
+            class="import-summary-text"
+            id="stagedImportSummary"
+            style="font-size: 0.9rem; line-height: 1.4; margin-bottom: 16px"
+          >
+            <span data-i18n="backupInstruction"
+              >Backup file loaded. Select how you want to apply the
+              backup:</span
+            >
+          </div>
+          <div class="btn-group-row" style="flex-direction: column; gap: 10px">
+            <button
+              type="button"
+              class="btn-primary"
+              id="importMergeBtn"
+              style="padding: 12px; font-weight: 600"
+            >
+              <span data-i18n="mergeConflicts"
+                >🔄 Merge & Resolve Conflicts</span
+              >
+            </button>
+            <button
+              type="button"
+              class="btn-danger"
+              id="importReplaceAllBtn"
+              style="padding: 12px; font-weight: 600"
+            >
+              <span data-i18n="replaceLiveData">⚠️ Replace All Live Data</span>
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              id="importCancelBtn"
+              style="padding: 10px"
+              data-i18n="cancel"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING TAB: HEALTH CHECK & REPAIR MODAL -->
+    <div class="floating-tab health-check" id="healthCheckModal">
+      <div class="ft-content-container">
+        <div class="wallets-header">
+          <div class="wh-text" data-i18n="healthCheck">
+            Database Health Check
+          </div>
+        </div>
+        <div class="settings-group" style="padding: 16px">
+          <div
+            id="healthCheckReportContainer"
+            style="
+              font-size: 0.9rem;
+              line-height: 1.5;
+              margin-bottom: 16px;
+              max-height: 250px;
+              overflow-y: auto;
+            "
+          >
+            <!-- Diagnostics rendered dynamically -->
+          </div>
+          <div class="btn-group-row" style="gap: 10px">
+            <button
+              type="button"
+              class="btn-primary-sm"
+              id="executeAutoRepairBtn"
+              style="display: none; padding: 10px 16px; font-weight: 600"
+            >
+              <span data-i18n="autoRepair">🛠️ Auto Repair Errors</span>
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              id="closeHealthCheckBtn"
+              style="padding: 10px 16px"
+              data-i18n="close"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SELECTOR OVERLAY MODAL (Generic selection popup for Category, Wallet, Person, Type) -->
+    <div class="picker-overlay" id="pickerOverlayModal">
+      <div class="picker-content">
+        <div class="picker-header">
+          <div
+            class="picker-title"
+            id="pickerTitle"
+            data-i18n="selectOptionTitle"
+          >
+            Select Option
+          </div>
+          <button type="button" class="picker-close" id="closePickerBtn">
+            &times;
+          </button>
+        </div>
+        <div class="picker-options" id="pickerOptionsContainer">
+          <!-- Rendered dynamically -->
+        </div>
+        <div class="picker-custom-row" id="pickerCustomInputRow">
+          <input
+            type="text"
+            id="pickerCustomInput"
+            placeholder="Add new..."
+            data-i18n="addNew"
+          />
+          <button type="button" id="pickerAddCustomBtn">+</button>
+        </div>
+        <button
+          type="button"
+          class="picker-done"
+          id="pickerDoneBtn"
+          data-i18n="done"
+          style="display: none"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+
+    <!-- BOTTOM TAB BAR -->
+    <nav class="bottom-tab-bar">
+      <div class="tab-button-group-container">
+        <div class="tab-button-group">
+          <button class="tab-button-gen history active" id="navHistoryTab">
+            <div class="tab-button-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M7 2h10" />
+                <path d="M5 6h14" />
+                <rect width="18" height="12" x="3" y="10" rx="2" />
+              </svg>
+            </div>
+            <div class="tab-button-text" data-i18n="history">History</div>
+          </button>
+          <button class="tab-button-gen wallets" id="navWalletsTab">
+            <div class="tab-button-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M17 14h.01" />
+                <path
+                  d="M7 7h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14"
+                />
+              </svg>
+            </div>
+            <div class="tab-button-text" data-i18n="wallets">Wallets</div>
+          </button>
+          <button class="tab-button-gen loans" id="navLoansTab">
+            <div class="tab-button-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17" />
+                <path
+                  d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"
+                />
+                <path d="m2 16 6 6" />
+                <circle cx="16" cy="9" r="2.9" />
+                <circle cx="6" cy="5" r="3" />
+              </svg>
+            </div>
+            <div class="tab-button-text" data-i18n="loans">Loans</div>
+          </button>
+        </div>
+      </div>
+
+      <button class="tab-fab" id="navFabBtn">
+        <div class="tab-button-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M5 12h14" />
+            <path d="M12 5v14" />
+          </svg>
+        </div>
+        <div class="tab-button-text" data-i18n="new">New</div>
+      </button>
+    </nav>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

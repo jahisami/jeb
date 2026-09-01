@@ -1990,6 +1990,23 @@ function bindFormControls() {
       document.getElementById("loanNoteInput").value = "";
       closeSheet(document.getElementById("addLoanModal"));
     });
+  
+  // fixed unhandled wallet selector button 
+  document
+    .getElementById("repaymentWalletSelectorBtn")
+    ?.addEventListener("click", async () => {
+      const options = await getWalletOptionsWithBalances();
+      showPicker(
+        locale("selectWallet"),
+        options,
+        formRepaymentState.walletId,
+        (selected) => {
+          formRepaymentState.walletId = selected.id;
+          updateFormSelectorLabels();
+        },
+        document.getElementById("repaymentWalletSelectorBtn"),
+      );
+    });
 
   // Save Repayment
   document

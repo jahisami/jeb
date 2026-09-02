@@ -26,7 +26,7 @@ import {
   deleteCategory,
   updateSettings,
 } from "./core/entity-service.js";
-import { addLoan, addLoanRepayment, deleteLoan } from "./core/loan-service.js";
+import { addLoan, addLoanRepayment, updateLoan, updateLoanRepayment, deleteLoan } from "./core/loan-service.js";
 import { completeOnboarding } from "./core/onboarding-service.js";
 import {
   validateDatabase,
@@ -52,7 +52,11 @@ let sessionWindowSessionId = null;
 let selectedMainWalletId = null;
 let activeNavTab = "history";
 let currentTxFilters = { types: [], categories: [], search: "" };
+let sessionHistoryFilters = { types: [], categories: [], search: "" };
 let currentLoanFilters = { type: null, personId: null };
+let selectedTransactionId = null;
+let editingLoanId = null;
+let editingRepaymentId = null;
 
 // Form Selection Temporary States
 let formTxState = {
@@ -82,6 +86,9 @@ export function initUI() {
   bindFormControls();
   bindPickerOverlay();
   bindFilters();
+  bindSessionHistoryFilters();
+  bindTransactionActions();
+  bindLoanActionsMenu();
   bindSessionAndSettings();
   bindPinLockKeypad();
   bindEntityManagers();
@@ -117,6 +124,7 @@ function bindStoreEvents() {
     "loan:updated",
     "loan:deleted",
     "repayment:added",
+    "repayment:updated",
     "settings:updated",
     "category:added",
     "category:updated",
@@ -453,11 +461,13 @@ function setSessionWindowTab(tab) {
   const historyTab = document.getElementById("sessionWindowHistoryTab");
   const summary = document.getElementById("sessionSummaryContent");
   const history = document.getElementById("sessionWindowHistoryContent");
+  const historyFilters = document.querySelector(".session-history-filters");
   const isSummary = tab === "summary";
   summaryTab?.classList.toggle("active", isSummary);
   historyTab?.classList.toggle("active", !isSummary);
   if (summary) summary.style.display = isSummary ? "block" : "none";
   if (history) history.style.display = isSummary ? "none" : "block";
+  if (historyFilters) historyFilters.style.display = isSummary ? "none" : "flex";
   if (!isSummary) renderSessionWindowHistory();
 }
 
@@ -468,18 +478,195 @@ async function renderSessionWindowHistory() {
     sessionWindowSessionId ||
     selectedViewSessionId ||
     data.settings.currentSession;
-  const txs = (await db.transactions.toArray()).filter(
-    (tx) => !tx.isDeleted && Number(tx.sessionID) === Number(sessionId),
-  );
+  const txs = await getTransactions({
+    sessionIds: [sessionId],
+    types: sessionHistoryFilters.types,
+    categories: sessionHistoryFilters.categories,
+    search: sessionHistoryFilters.search,
+  });
   container.innerHTML = txs.length
-    ? txs
-        .sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime))
-        .map(
-          (tx) =>
-            `<div class="session-history-row"><span>${escapeHtml(tx.note || tx.catagory || tx.type)}<small>${formatDate(tx.dateTime)}</small></span><strong>${tx.type === "expense" || tx.type === "loan_given" || tx.type === "borrowed_repaid_by_user" ? "-" : "+"}${data.settings.currencySymbol || "৳"}${formatNumber(tx.amount)}</strong></div>`,
-        )
-        .join("")
+    ? txs.map((tx) => `<button type="button" class="session-history-entry" data-transaction-id="${Number(tx.id)}">${transactionDetailsMarkup(tx)}</button>`).join("")
     : `<div class="empty-state">${locale("noTransactionsSession")}</div>`;
+
+  // Rebind after using a string template, while keeping the renderer DOM-safe.
+  container.querySelectorAll(".session-history-entry").forEach((item) => {
+    const txId = Number(item.dataset.transactionId);
+    const tx = txs.find((candidate) => Number(candidate.id) === txId);
+    if (!tx) return;
+    item.addEventListener("click", () => {
+      if (tx.loanId != null) {
+        alert(locale("loanEntriesManaged"));
+        return;
+      }
+      openTransactionActions(tx);
+    });
+  });
+}
+
+function transactionIsOut(tx) {
+  return ["expense", "loan_given", "borrowed_repaid_by_user"].includes(tx.type);
+}
+
+function transactionTypeText(type) {
+  const labels = {
+    income: "income",
+    expense: "expense",
+    transfer: "transfer",
+    adjustment: "adjustment",
+    loan_given: "loanGiven",
+    loan_borrowed: "loanBorrowed",
+    loan_repaid_to_user: "repaymentReceived",
+    borrowed_repaid_by_user: "repaymentPaid",
+  };
+  return locale(labels[type] || "transactionActions");
+}
+
+function transactionDetailsMarkup(tx, includeActionData = false) {
+  const sym = data.settings.currencySymbol || "৳";
+  const sourceName = tx.source != null
+    ? data.wallets[tx.source]?.title || locale("wallet")
+    : "—";
+  const targetName = tx.target != null
+    ? data.wallets[tx.target]?.title || locale("wallet")
+    : "—";
+  const categoryName = tx.type === "income" ? "—" : tx.catagory || "—";
+  const amount = `${transactionIsOut(tx) ? "-" : "+"}${sym}${formatNumber(tx.amount)}`;
+  const actionData = includeActionData ? ` data-transaction-id="${Number(tx.id)}"` : "";
+  return `<div class="transaction-detail-content"${actionData}>
+    <div class="transaction-detail-heading"><span>${escapeHtml(tx.note || transactionTypeText(tx.type))}</span><strong class="${transactionIsOut(tx) ? "out" : "in"}">${amount}</strong></div>
+    <div class="transaction-detail-grid">
+      <div class="transaction-detail-row"><span>${locale("transactionTypeLabel")}</span><strong>${escapeHtml(transactionTypeText(tx.type))}</strong></div>
+      <div class="transaction-detail-row"><span>${locale("dateTimeLabel")}</span><strong>${escapeHtml(formatDate(tx.dateTime))}</strong></div>
+      <div class="transaction-detail-row"><span>${locale("sourceWallet")}</span><strong>${escapeHtml(sourceName)}</strong></div>
+      ${tx.target != null ? `<div class="transaction-detail-row"><span>${locale("targetWalletLabel")}</span><strong>${escapeHtml(targetName)}</strong></div>` : ""}
+      <div class="transaction-detail-row"><span>${locale("category")}</span><strong>${escapeHtml(categoryName)}</strong></div>
+    </div>
+    ${tx.note ? `<div class="transaction-detail-note">${escapeHtml(tx.note)}</div>` : ""}
+  </div>`;
+}
+
+function canEditTransaction(tx) {
+  return !data.sessions[Number(tx.sessionID)]?.isStamped;
+}
+
+function bindLoanActionsMenu() {
+  const button = document.getElementById("loanDetailsMenuBtn");
+  const menu = document.getElementById("loanDetailsActionsMenu");
+  if (!button || !menu) return;
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const isOpen = menu.classList.toggle("active");
+    button.setAttribute("aria-expanded", String(isOpen));
+  });
+  document.addEventListener("click", (event) => {
+    if (!menu.contains(event.target) && event.target !== button) {
+      menu.classList.remove("active");
+      button.setAttribute("aria-expanded", "false");
+    }
+  });
+}
+
+function closeLoanActionsMenu() {
+  const menu = document.getElementById("loanDetailsActionsMenu");
+  const button = document.getElementById("loanDetailsMenuBtn");
+  menu?.classList.remove("active");
+  button?.setAttribute("aria-expanded", "false");
+}
+
+async function openTransactionActions(tx) {
+  selectedTransactionId = Number(tx.id);
+  const details = document.getElementById("transactionActionDetails");
+  if (!details) return;
+  details.innerHTML = transactionDetailsMarkup(tx);
+  if (tx.feeTxId) {
+    const fee = await db.transactions.get(Number(tx.feeTxId));
+    if (selectedTransactionId !== Number(tx.id)) return;
+    if (fee && !fee.isDeleted) {
+      details.insertAdjacentHTML(
+        "beforeend",
+        `<div class="transaction-detail-row"><span>${locale("transferFee")}</span><strong>${data.settings.currencySymbol || "৳"}${formatNumber(fee.amount)}</strong></div>`,
+      );
+    }
+  }
+  const editable = canEditTransaction(tx);
+  const editButton = document.getElementById("editSelectedTransactionBtn");
+  const deleteButton = document.getElementById("deleteSelectedTransactionBtn");
+  if (editButton) editButton.disabled = !editable;
+  if (deleteButton) deleteButton.disabled = !editable;
+  openSheet(document.getElementById("transactionActionsModal"));
+}
+
+function bindTransactionActions() {
+  document.getElementById("closeTransactionActionsBtn")?.addEventListener("click", () => {
+    closeSheet(document.getElementById("transactionActionsModal"));
+  });
+  document.getElementById("editSelectedTransactionBtn")?.addEventListener("click", async () => {
+    const tx = selectedTransactionId ? await db.transactions.get(selectedTransactionId) : null;
+    if (!tx || !canEditTransaction(tx)) return;
+    closeSheet(document.getElementById("transactionActionsModal"));
+    openEditTransactionModal(tx);
+  });
+  document.getElementById("deleteSelectedTransactionBtn")?.addEventListener("click", async () => {
+    const tx = selectedTransactionId ? await db.transactions.get(selectedTransactionId) : null;
+    if (!tx || !canEditTransaction(tx)) return;
+    if (!confirm(locale("deleteTransactionConfirm"))) return;
+    try {
+      await deleteTransaction(tx.id);
+      closeSheet(document.getElementById("transactionActionsModal"));
+      selectedTransactionId = null;
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+}
+
+function bindSessionHistoryFilters() {
+  document.getElementById("sessionHistorySearchInput")?.addEventListener("input", (event) => {
+    sessionHistoryFilters.search = event.target.value;
+    renderSessionWindowHistory();
+  });
+  document.getElementById("sessionHistoryInBtn")?.addEventListener("click", () => {
+    sessionHistoryFilters.types = sessionHistoryFilters.types.includes("income") ? [] : ["income"];
+    updateSessionHistoryFilterUI();
+    renderSessionWindowHistory();
+  });
+  document.getElementById("sessionHistoryOutBtn")?.addEventListener("click", () => {
+    sessionHistoryFilters.types = sessionHistoryFilters.types.includes("expense") ? [] : ["expense"];
+    updateSessionHistoryFilterUI();
+    renderSessionWindowHistory();
+  });
+  document.getElementById("sessionHistoryCategoryBtn")?.addEventListener("click", () => {
+    const options = [
+      { id: null, title: `${locale("all")} ${locale("categories")}` },
+      ...data.catagories.map((category) => ({ id: category, title: category })),
+    ];
+    showPicker(locale("selectCategory"), options, sessionHistoryFilters.categories, (selected, selectedIds) => {
+      sessionHistoryFilters.categories = selectedIds;
+      updateSessionHistoryFilterUI();
+      renderSessionWindowHistory();
+    }, document.getElementById("sessionHistoryCategoryBtn"), null, true);
+  });
+  updateSessionHistoryFilterUI();
+}
+
+function updateSessionHistoryFilterUI() {
+  document.getElementById("sessionHistoryInBtn")?.classList.toggle("active", sessionHistoryFilters.types.includes("income"));
+  document.getElementById("sessionHistoryOutBtn")?.classList.toggle("active", sessionHistoryFilters.types.includes("expense"));
+  const chips = document.getElementById("sessionHistoryFilterChips");
+  if (!chips) return;
+  chips.innerHTML = "";
+  sessionHistoryFilters.categories.forEach((category) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.textContent = category;
+    chip.addEventListener("click", () => {
+      sessionHistoryFilters.categories = sessionHistoryFilters.categories.filter((item) => item !== category);
+      updateSessionHistoryFilterUI();
+      renderSessionWindowHistory();
+    });
+    chips.appendChild(chip);
+  });
 }
 
 // --- Render Sessions Manager Sheet ---
@@ -609,14 +796,16 @@ function bindSessionAndSettings() {
       { id: "none", title: locale("noLock") },
       { id: "pin", title: locale("pinLock") },
       { id: "biometrics", title: locale("biometrics") },
+      { id: "both", title: locale("pinAndBiometrics") },
     ];
     showPicker(
       locale("selectSecurityLock"),
       options,
-      data.settings.lockMode || "none",
+      getConfiguredLockMode(),
       async (selected) => {
         if (selected.id === "pin") {
           if (!(await configurePin())) return;
+          await updateSettings({ lockMode: "pin", pinLockEnabled: true, biometricCredentialId: "" });
         } else if (selected.id === "biometrics") {
           if (!window.PublicKeyCredential) {
             alert(locale("biometricUnsupported"));
@@ -629,10 +818,23 @@ function bindSessionAndSettings() {
             pinLockEnabled: false,
             biometricCredentialId: credentialId,
           });
+        } else if (selected.id === "both") {
+          if (!window.PublicKeyCredential) {
+            alert(locale("biometricUnsupported"));
+            return;
+          }
+          const credentialId = await registerBiometric();
+          if (!credentialId) return;
+          if (!(await configurePin())) return;
+          await updateSettings({
+            lockMode: "both",
+            pinLockEnabled: true,
+            biometricCredentialId: credentialId,
+          });
         } else {
           await updateSettings({
-            lockMode: selected.id,
-            pinLockEnabled: selected.id === "pin",
+            lockMode: "none",
+            pinLockEnabled: false,
           });
         }
         updateSettingsLabels();
@@ -766,6 +968,14 @@ function bindSessionAndSettings() {
   });
 }
 
+function getConfiguredLockMode() {
+  const storedMode = data.settings.lockMode;
+  if (["none", "pin", "biometrics", "both"].includes(storedMode)) {
+    return storedMode;
+  }
+  return data.settings.pinLockEnabled ? "pin" : data.settings.biometricCredentialId ? "biometrics" : "none";
+}
+
 function updateSettingsLabels() {
   const defWallet = data.wallets[data.settings.defaultWalletId];
   document.getElementById("settingsDefaultWalletBtn").textContent = defWallet
@@ -776,10 +986,11 @@ function updateSettingsLabels() {
   document.getElementById("settingsThemeBtn").textContent = locale(
     `${data.settings.theme || "system"}Theme`,
   );
-  const lockMode =
-    data.settings.lockMode || (data.settings.pinLockEnabled ? "pin" : "none");
+  const lockMode = getConfiguredLockMode();
   const lockText =
-    lockMode === "biometrics"
+    lockMode === "both"
+      ? `${locale("pinCodeLabel")} + ${locale("biometricsShort")}`
+      : lockMode === "biometrics"
       ? `${locale("biometricsShort")} ☝️`
       : lockMode === "pin"
         ? `${locale("pinCodeLabel")} 🔒`
@@ -787,7 +998,7 @@ function updateSettingsLabels() {
   document.getElementById("settingsPinBtn").textContent = lockText;
   const changePinRow = document.getElementById("changePinRow");
   if (changePinRow)
-    changePinRow.style.display = data.settings.pinCode ? "flex" : "none";
+    changePinRow.style.display = data.settings.pinLockEnabled && data.settings.pinCode ? "flex" : "none";
 }
 
 async function configurePin() {
@@ -803,7 +1014,11 @@ async function configurePin() {
     alert(locale("pinMismatch"));
     return false;
   }
-  await updateSettings({ lockMode: "pin", pinLockEnabled: true, pinCode: pin });
+  await updateSettings({
+    lockMode: data.settings.biometricCredentialId ? "both" : "pin",
+    pinLockEnabled: true,
+    pinCode: pin,
+  });
   return true;
 }
 
@@ -846,7 +1061,7 @@ function bindStarterPage() {
   if (!form || !protection) return;
 
   const updateProtectionFields = () => {
-    pinFields?.classList.toggle("active", protection.value === "pin");
+    pinFields?.classList.toggle("active", ["pin", "both"].includes(protection.value));
   };
   protection.addEventListener("change", updateProtectionFields);
   language?.addEventListener("change", () => {
@@ -858,20 +1073,22 @@ function bindStarterPage() {
     const errorEl = document.getElementById("starterError");
     if (errorEl) errorEl.textContent = "";
     const lockMode = protection.value;
+    const needsPin = ["pin", "both"].includes(lockMode);
+    const needsBiometrics = ["biometrics", "both"].includes(lockMode);
     const pin = document.getElementById("starterPinInput")?.value || "";
     const confirmPin =
       document.getElementById("starterPinConfirmInput")?.value || "";
-    if (lockMode === "pin" && !/^\d{4}$/.test(pin)) {
+    if (needsPin && !/^\d{4}$/.test(pin)) {
       if (errorEl) errorEl.textContent = locale("invalidPin");
       return;
     }
-    if (lockMode === "pin" && pin !== confirmPin) {
+    if (needsPin && pin !== confirmPin) {
       if (errorEl) errorEl.textContent = locale("pinMismatch");
       return;
     }
 
     let biometricCredentialId = "";
-    if (lockMode === "biometrics") {
+    if (needsBiometrics) {
       if (!window.PublicKeyCredential || !navigator.credentials?.create) {
         if (errorEl) errorEl.textContent = locale("biometricSetupFailed");
         return;
@@ -922,8 +1139,7 @@ function showStarterPage() {
 function checkPinLockOnBoot() {
   const overlay = document.getElementById("pinLockOverlay");
   const bioBtn = document.getElementById("pinBiometricBtn");
-  const lockMode =
-    data.settings.lockMode || (data.settings.pinLockEnabled ? "pin" : "none");
+  const lockMode = getConfiguredLockMode();
 
   if (lockMode === "none") {
     overlay.classList.remove("active");
@@ -934,7 +1150,7 @@ function checkPinLockOnBoot() {
   updatePinDots();
   overlay.classList.add("active");
 
-  if (lockMode === "biometrics") {
+  if (["biometrics", "both"].includes(lockMode)) {
     if (bioBtn) bioBtn.style.display = "block";
     tryBiometricAuth();
   } else {
@@ -943,8 +1159,7 @@ function checkPinLockOnBoot() {
 }
 
 function lockApp() {
-  const lockMode =
-    data.settings.lockMode || (data.settings.pinLockEnabled ? "pin" : "none");
+  const lockMode = getConfiguredLockMode();
   if (lockMode === "none") {
     alert(locale("noLockSetup"));
     return;
@@ -953,7 +1168,7 @@ function lockApp() {
   pinInputBuffer = "";
   updatePinDots();
   overlay?.classList.add("active");
-  if (lockMode === "biometrics") tryBiometricAuth();
+  if (["biometrics", "both"].includes(lockMode)) tryBiometricAuth();
 }
 
 async function tryBiometricAuth() {
@@ -1259,7 +1474,7 @@ async function renderTransactionHistory() {
         alert(locale("loanEntriesManaged"));
         return;
       }
-      openEditTransactionModal(tx);
+      openTransactionActions(tx);
     });
 
     container.appendChild(item);
@@ -1320,12 +1535,18 @@ async function renderLoansList() {
     personId: currentLoanFilters.personId,
   });
 
-  if (filtered.length === 0) {
+  const currentSessionId = Number(data.settings.currentSession);
+  const visibleLoans = filtered.filter(
+    ({ loan, remaining }) =>
+      remaining > 0 || Number(loan.sessionID) === currentSessionId,
+  );
+
+  if (visibleLoans.length === 0) {
     container.innerHTML = `<div class="empty-state">${locale("noLoans")}</div>`;
     return;
   }
 
-  filtered.forEach(({ loan, repayments, totalRepaid, remaining }) => {
+  visibleLoans.forEach(({ loan, repayments, totalRepaid, remaining }) => {
     const person = data.persons.find(
       (p) => Number(p.id) === Number(loan.personId),
     );
@@ -1385,6 +1606,8 @@ function openLoanDetailsModal(
   repayments,
 ) {
   const sym = data.settings.currencySymbol || "৳";
+  const loanEditable = canEditTransaction({ sessionID: loan.sessionID });
+  closeLoanActionsMenu();
   document.getElementById("loanDetailsHeaderPerson").textContent =
     `${personName}'s ${locale("loanTimeline")}`;
 
@@ -1423,13 +1646,57 @@ function openLoanDetailsModal(
         <div class="tl-icon">✓</div>
         <div class="tl-info">
           <div class="tl-date">${formatDate(tx.dateTime)}</div>
-          <div class="tl-note">${escapeHtml(tx.note || wallName)}</div>
+          <div class="tl-note">${escapeHtml(tx.note || wallName)} · ${escapeHtml(wallName)}</div>
         </div>
         <div class="tl-amt">${loan.type === "borrowed" ? "-" : "+"}${sym}${formatNumber(tx.amount)}</div>
+        <div class="timeline-actions">
+          <button type="button" class="timeline-action timeline-edit" data-i18n="editRepayment">${locale("editRepayment")}</button>
+          <button type="button" class="timeline-action timeline-delete" data-i18n="deleteRepayment">${locale("deleteRepayment")}</button>
+        </div>
       `;
+      row.querySelectorAll(".timeline-action").forEach((button) => {
+        button.disabled = !canEditTransaction(tx);
+      });
+      row.querySelector(".timeline-edit")?.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        openEditRepaymentModal(loan, tx, personName);
+      });
+      row.querySelector(".timeline-delete")?.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        if (!confirm(locale("deleteRepaymentConfirm"))) return;
+        try {
+          await deleteTransaction(tx.id);
+          await refreshLoanDetails(loan.id);
+        } catch (error) {
+          alert(error.message);
+        }
+      });
       timelineContainer.appendChild(row);
     });
   }
+
+  const editLoanButton = document.getElementById("loanDetailsEditBtn");
+  const deleteLoanButton = document.getElementById("loanDetailsDeleteBtn");
+  const recordRepaymentButton = document.getElementById("loanDetailsRecordRepaymentBtn");
+  if (editLoanButton) editLoanButton.disabled = !loanEditable;
+  if (deleteLoanButton) deleteLoanButton.disabled = !loanEditable;
+  if (recordRepaymentButton) recordRepaymentButton.disabled = remaining <= 0;
+
+  document.getElementById("loanDetailsEditBtn").onclick = async () => {
+    if (!loanEditable) return;
+    openEditLoanModal(loan);
+  };
+
+  document.getElementById("loanDetailsDeleteBtn").onclick = async () => {
+    if (!loanEditable) return;
+    if (!confirm(locale("deleteLoanConfirm"))) return;
+    try {
+      await deleteLoan(loan.id);
+      closeSheet(document.getElementById("loanDetailsModal"));
+    } catch (error) {
+      alert(error.message);
+    }
+  };
 
   document.getElementById("loanDetailsRecordRepaymentBtn").onclick = () => {
     closeSheet(document.getElementById("loanDetailsModal"));
@@ -1439,12 +1706,61 @@ function openLoanDetailsModal(
   openSheet(document.getElementById("loanDetailsModal"));
 }
 
+async function refreshLoanDetails(loanId) {
+  const match = (await getLoans()).find(({ loan }) => Number(loan.id) === Number(loanId));
+  if (!match) {
+    closeSheet(document.getElementById("loanDetailsModal"));
+    return;
+  }
+  const personName = data.persons.find((person) => Number(person.id) === Number(match.loan.personId))?.name || locale("person");
+  openLoanDetailsModal(match.loan, personName, match.remaining, match.totalRepaid, match.repayments);
+}
+
+function openEditLoanModal(loan) {
+  closeLoanActionsMenu();
+  editingLoanId = Number(loan.id);
+  editingRepaymentId = null;
+  formLoanState = {
+    type: loan.type,
+    personId: Number(loan.personId),
+    walletId: Number(loan.source),
+  };
+  document.getElementById("loanAmountInput").value = loan.amount;
+  document.getElementById("loanNoteInput").value = loan.note || "";
+  setFormDateTime("loanDateTimeBtn", "loanDateTimeInput", loan.dateTime);
+  document.getElementById("loanModalTitle").textContent = locale("editLoanTitle");
+  closeSheet(document.getElementById("loanDetailsModal"));
+  updateFormSelectorLabels();
+  openSheet(document.getElementById("addLoanModal"));
+}
+
+function openEditRepaymentModal(loan, transaction, personName) {
+  editingRepaymentId = Number(transaction.id);
+  editingLoanId = null;
+  formRepaymentState = {
+    loanId: Number(loan.id),
+    walletId: Number(transaction.source),
+  };
+  document.getElementById("repaymentModalTitle").textContent = `${locale("editRepaymentTitle")} (${personName})`;
+  document.getElementById("repaymentAmountInput").value = transaction.amount;
+  document.getElementById("repaymentNoteInput").value = transaction.note || "";
+  setFormDateTime("repaymentDateTimeBtn", "repaymentDateTimeInput", transaction.dateTime);
+  closeSheet(document.getElementById("loanDetailsModal"));
+  updateFormSelectorLabels();
+  openSheet(document.getElementById("addRepaymentModal"));
+}
+
 function openRepaymentModal(loan, personName, remaining) {
+  editingRepaymentId = null;
+  editingLoanId = null;
   formRepaymentState.loanId = loan.id;
+  formRepaymentState.walletId = Number(selectedMainWalletId || data.settings.defaultWalletId || 1);
   document.getElementById("repaymentModalTitle").textContent =
     `${locale("recordRepayment")} (${personName})`;
   document.getElementById("repaymentAmountInput").value = remaining;
+  document.getElementById("repaymentNoteInput").value = "";
   resetDateTimeInputs();
+  updateFormSelectorLabels();
   openSheet(document.getElementById("addRepaymentModal"));
 }
 
@@ -1963,7 +2279,7 @@ function bindFormControls() {
         ? new Date(dateTimeVal).toISOString()
         : new Date().toISOString();
 
-      if (formLoanState.type === "given") {
+      if (!editingLoanId && formLoanState.type === "given") {
         const ok = await checkWalletSufficientFunds(
           formLoanState.walletId,
           amountVal,
@@ -1972,14 +2288,25 @@ function bindFormControls() {
       }
 
       try {
-        await addLoan({
-          personId: formLoanState.personId,
-          amount: amountVal,
-          dateTime: isoDate,
-          source: formLoanState.walletId,
-          type: formLoanState.type,
-          note,
-        });
+        if (editingLoanId) {
+          await updateLoan(editingLoanId, {
+            personId: formLoanState.personId,
+            amount: amountVal,
+            dateTime: isoDate,
+            source: formLoanState.walletId,
+            type: formLoanState.type,
+            note,
+          });
+        } else {
+          await addLoan({
+            personId: formLoanState.personId,
+            amount: amountVal,
+            dateTime: isoDate,
+            source: formLoanState.walletId,
+            type: formLoanState.type,
+            note,
+          });
+        }
       } catch (error) {
         alert(error.message);
         return;
@@ -1988,10 +2315,11 @@ function bindFormControls() {
       lastUsedDateTimeIso = isoDate;
       document.getElementById("loanAmountInput").value = "";
       document.getElementById("loanNoteInput").value = "";
+      editingLoanId = null;
+      document.getElementById("loanModalTitle").textContent = locale("addLoan");
       closeSheet(document.getElementById("addLoanModal"));
     });
-  
-  // fixed unhandled wallet selector button 
+
   document
     .getElementById("repaymentWalletSelectorBtn")
     ?.addEventListener("click", async () => {
@@ -2030,7 +2358,7 @@ function bindFormControls() {
         : new Date().toISOString();
 
       const loanObj = await db.loans.get(Number(formRepaymentState.loanId));
-      if (loanObj && loanObj.type === "borrowed") {
+      if (!editingRepaymentId && loanObj && loanObj.type === "borrowed") {
         const ok = await checkWalletSufficientFunds(
           formRepaymentState.walletId,
           amountVal,
@@ -2039,13 +2367,22 @@ function bindFormControls() {
       }
 
       try {
-        await addLoanRepayment({
-          loanId: formRepaymentState.loanId,
-          amount: amountVal,
-          source: formRepaymentState.walletId,
-          dateTime: isoDate,
-          note,
-        });
+        if (editingRepaymentId) {
+          await updateLoanRepayment(editingRepaymentId, {
+            amount: amountVal,
+            source: formRepaymentState.walletId,
+            dateTime: isoDate,
+            note,
+          });
+        } else {
+          await addLoanRepayment({
+            loanId: formRepaymentState.loanId,
+            amount: amountVal,
+            source: formRepaymentState.walletId,
+            dateTime: isoDate,
+            note,
+          });
+        }
       } catch (error) {
         alert(error.message);
         return;
@@ -2054,6 +2391,8 @@ function bindFormControls() {
       lastUsedDateTimeIso = isoDate;
       document.getElementById("repaymentAmountInput").value = "";
       document.getElementById("repaymentNoteInput").value = "";
+      editingRepaymentId = null;
+      document.getElementById("repaymentModalTitle").textContent = locale("recordLoanRepayment");
       closeSheet(document.getElementById("addRepaymentModal"));
     });
 }
@@ -2152,6 +2491,7 @@ function resetTransactionForm() {
 }
 
 function resetLoanForm() {
+  editingLoanId = null;
   formLoanState = {
     type: "given",
     personId: null,
@@ -2161,6 +2501,7 @@ function resetLoanForm() {
   };
   document.getElementById("loanAmountInput").value = "";
   document.getElementById("loanNoteInput").value = "";
+  document.getElementById("loanModalTitle").textContent = locale("addLoan");
   updateFormSelectorLabels();
 }
 

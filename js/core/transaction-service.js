@@ -166,10 +166,29 @@ export async function addAdjustmentTransaction({ amount, source, note, isIncreas
 
 export async function deleteTransaction(id) {
   const transaction = await db.transactions.get(Number(id));
-  if (transaction) {
-    await assertSessionWritable(transaction.sessionID);
+  if (!transaction) return;
+  await assertSessionWritable(transaction.sessionID);
+  const feeTransaction = transaction.feeTxId
+    ? await db.transactions.get(Number(transaction.feeTxId))
+    : null;
+  if (feeTransaction) await assertSessionWritable(feeTransaction.sessionID);
+  await db.transaction("rw", [db.transactions], async () => {
     await db.transactions.update(Number(id), { isDeleted: true });
-    if (transaction.feeTxId) await db.transactions.update(Number(transaction.feeTxId), { isDeleted: true });
+    if (feeTransaction) await db.transactions.update(Number(feeTransaction.id), { isDeleted: true });
+  });
+  if (transaction.loanId != null && ["loan_repaid_to_user", "borrowed_repaid_by_user"].includes(transaction.type)) {
+    await recalculateLoanStatus(transaction.loanId);
   }
   eventBus.emit("transaction:deleted", Number(id));
+}
+
+export async function recalculateLoanStatus(loanId) {
+  const id = Number(loanId);
+  const loan = await db.loans.get(id);
+  if (!loan || loan.isDeleted) return;
+  const repayments = await db.transactions.where("loanId").equals(id).toArray();
+  const repaid = repayments
+    .filter((transaction) => !transaction.isDeleted && ["loan_repaid_to_user", "borrowed_repaid_by_user"].includes(transaction.type))
+    .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+  await db.loans.update(id, { status: repaid >= Number(loan.amount) ? "settled" : "active" });
 }

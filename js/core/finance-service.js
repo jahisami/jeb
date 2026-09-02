@@ -30,15 +30,32 @@ export async function getCurrentSessionCalculatedData() {
     db.transactions.toArray(),
     db.loans.toArray(),
   ]);
-  const activeTransactions = allTransactions.filter(
+  const activeTransactions = allTransactions.filter((tx) => !tx.isDeleted);
+  const transactionsBeforeCurrent = activeTransactions.filter(
     (tx) =>
-      !tx.isDeleted &&
       Number(tx.sessionID) >= startSessionId &&
-      Number(tx.sessionID) <= Number(currentSessionId),
+      Number(tx.sessionID) < Number(currentSessionId),
+  );
+
+  // A new session starts its own totals at zero. Transactions from earlier
+  // sessions still establish the opening wallet balances, but they must not
+  // be counted again as current-session expenses or income.
+  if (transactionsBeforeCurrent.length) {
+    initialWalletBalances = calculateSessionMetrics({
+      targetSessionId: Number(currentSessionId) - 1,
+      transactions: transactionsBeforeCurrent,
+      loans: allLoans,
+      allTransactions,
+      initialWalletBalances,
+    }).currentWalletBalances;
+  }
+
+  const currentTransactions = activeTransactions.filter(
+    (tx) => Number(tx.sessionID) === Number(currentSessionId),
   );
   return calculateSessionMetrics({
     targetSessionId: currentSessionId,
-    transactions: activeTransactions,
+    transactions: currentTransactions,
     loans: allLoans,
     allTransactions,
     initialWalletBalances,

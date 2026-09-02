@@ -19,7 +19,7 @@ export {
   addAdjustmentTransaction,
   deleteTransaction,
 } from "./transaction-service.js";
-export { addLoan, addLoanRepayment, deleteLoan } from "./loan-service.js";
+export { addLoan, addLoanRepayment, updateLoan, updateLoanRepayment, deleteLoan } from "./loan-service.js";
 export { getCurrentSessionCalculatedData, getSessionSummary } from "./finance-service.js";
 export { getTransactions, getLoans } from "./query-service.js";
 export { createNewSession, renameSession, stampSession } from "./session-service.js";

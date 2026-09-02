@@ -799,12 +799,16 @@ button.selector {
 }
 .timeline-item-row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0.8em;
   background-color: rgba(var(--bg-color), 1);
   padding: 0.6em 0.8em;
   border-radius: 0.8em;
   font-size: 0.85em;
+}
+.timeline-item-body {
+  display: flex;
+  gap: 0.8em;
 }
 .tl-icon {
   color: #22c55e;
@@ -830,7 +834,12 @@ button.selector {
   display: flex;
   gap: 0.3em;
   margin-left: auto;
+  display: none;
 }
+.timeline-item-row:hover .timeline-actions {
+  display: flex;
+}
+
 .timeline-action {
   padding: 0.3em 0.45em;
   border: 1px solid var(--border-color);
@@ -1217,16 +1226,19 @@ button.selector {
 .loan-detail-actions {
   position: relative;
   align-items: center;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
 }
 .loan-detail-actions button {
   padding: 0.4em 0.6em;
 }
 .loan-actions-menu-btn {
-  width: 2.1em;
-  height: 2.1em;
+  width: 1.7em;
+  height: 1.7em;
   padding: 0 !important;
   border: 1px solid var(--border-color);
-  border-radius: 50%;
+  border-radius: 0.5em;
   background: rgba(var(--card-bg), 1);
   color: rgba(var(--text-main), 1);
   font-size: 1.05em;

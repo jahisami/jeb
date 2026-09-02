@@ -1,4 +1,4 @@
-# Jeb --- Personal Finance Tracker
+# Jeb - Personal Finance Tracker
 
 **Jeb** is a privacy-focused, offline-first personal finance tracker
 built as a **Progressive Web App (PWA)**. It is designed for keeping
@@ -28,6 +28,7 @@ approach:
 
 Jeb is intended for personal use rather than as a cloud-synchronized
 financial service.
+
 
 ------------------------------------------------------------------------
 
@@ -448,26 +449,6 @@ Jeb currently includes:
 
 ------------------------------------------------------------------------
 
-## 🔮 Possible Future Improvements
-
-Potential future work could include:
-
--   Encrypted local database storage
--   Stronger backup encryption
--   More advanced reports and charts
--   Recurring transactions
--   Budgeting features
--   More granular permission/security controls
--   Improved backup validation and migration tooling
--   Additional localization
--   More advanced biometric authentication flows
--   Optional encrypted synchronization, if a privacy-preserving sync
-    architecture is ever introduced
-
-These are ideas rather than promises; the project remains intentionally
-local-first.
-
-------------------------------------------------------------------------
 
 ## 🤍 Philosophy in One Sentence
 

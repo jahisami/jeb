@@ -660,11 +660,16 @@ button.selector {
   display: flex;
   flex-direction: column;
   gap: 0.6em;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  border-radius: 1.2em;
 }
 .loan-item {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+  min-height: auto;
   position: relative;
   padding: 0;
   background-color: rgba(var(--card-bg), 1);
@@ -818,6 +823,31 @@ button.selector {
 .tl-amt {
   font-weight: 800;
   color: #22c55e;
+}
+
+.timeline-actions {
+  display: flex;
+  gap: 0.3em;
+  margin-left: auto;
+}
+.timeline-action {
+  padding: 0.3em 0.45em;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5em;
+  background: rgba(var(--card-bg), 1);
+  color: rgba(var(--text-main), 1);
+  font-size: 0.7em;
+  font-weight: 800;
+  cursor: pointer;
+}
+.timeline-delete {
+  color: #ef4444;
+}
+.timeline-action:disabled,
+.loan-detail-actions button:disabled,
+.transaction-action-buttons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 /* ====================================
@@ -1174,6 +1204,55 @@ button.selector {
   cursor: pointer;
 }
 
+.loan-detail-actions,
+.transaction-action-buttons {
+  display: flex;
+  gap: 0.45em;
+  flex-wrap: wrap;
+}
+.loan-detail-actions button {
+  padding: 0.4em 0.6em;
+}
+.transaction-action-buttons {
+  flex-direction: column;
+  margin-top: 1em;
+}
+.transaction-action-buttons button {
+  width: 100%;
+  padding: 0.8em;
+  border-radius: 0.9em;
+  font-weight: 800;
+  cursor: pointer;
+}
+.transaction-action-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+  padding: 1em;
+  border: 1px solid var(--border-color);
+  border-radius: 1em;
+  background: var(--bg-color);
+}
+.transaction-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  font-size: 0.85em;
+}
+.transaction-detail-row span:first-child {
+  color: var(--text-sub);
+}
+.transaction-detail-note {
+  margin-top: 0.4em;
+  padding-top: 0.65em;
+  border-top: 1px solid var(--border-color);
+  line-height: 1.45;
+}
+
+.transaction-actions {
+  z-index: 220 !important;
+}
+
 /* Summary Card Grid */
 .summary-card-grid {
   display: flex;
@@ -1420,6 +1499,54 @@ button.selector {
   font-weight: 800;
   cursor: pointer;
 }
+
+.transaction-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+}
+.transaction-detail-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  font-weight: 800;
+}
+.transaction-detail-heading strong.in {
+  color: #22c55e;
+}
+.transaction-detail-heading strong.out {
+  color: #ef4444;
+}
+.transaction-detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+.session-history-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+  margin: 0.8em 0;
+}
+.session-history-filters .search-inp {
+  width: 100%;
+}
+.session-history-entry {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.55em;
+  padding: 0.85em;
+  border: 1px solid var(--border-color);
+  border-radius: 0.9em;
+  background: rgba(var(--bg-color), 1);
+  color: rgba(var(--text-main), 1);
+  text-align: left;
+  cursor: pointer;
+}
+.session-history-entry:hover {
+  border-color: rgba(var(--primary-accent));
+}
+
 html.dark .picker-custom-row button {
   background-color: rgba(var(--primary-accent));
   color: var(--accent-text);

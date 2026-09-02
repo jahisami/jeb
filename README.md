@@ -459,7 +459,6 @@ local, private, and useful even when the internet disappears.**
 
 ## 📄 License
 
-No license is specified in this README.
+Jeb is open-source software licensed under the [MIT License](LICENSE).
 
-If you plan to make the repository publicly reusable, add an appropriate
-open-source license to the repository.
+Copyright © 2026 Jahid Hasan Sami.

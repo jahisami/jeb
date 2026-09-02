@@ -153,6 +153,7 @@
               <option value="biometrics" data-i18n="biometricProtection">
                 Biometrics
               </option>
+              <option value="both" data-i18n="pinAndBiometrics">PIN + Biometrics</option>
             </select>
           </label>
           <div class="starter-pin-fields" id="starterPinFields">
@@ -450,13 +451,14 @@
           >
             Loan Timeline
           </div>
-          <button
-            class="btn-primary-sm"
-            id="loanDetailsRecordRepaymentBtn"
-            data-i18n="addRepayment"
-          >
-            + Repayment
-          </button>
+          <div class="loan-detail-actions">
+            <button class="btn-primary-sm" id="loanDetailsRecordRepaymentBtn" data-i18n="addRepayment">+ Repayment</button>
+             <button type="button" class="loan-actions-menu-btn" id="loanDetailsMenuBtn" data-i18n-title="loanActions" data-i18n-aria-label="loanActions" aria-haspopup="menu" aria-expanded="false" aria-label="Loan actions">⋮</button>
+            <div class="loan-actions-menu" id="loanDetailsActionsMenu" role="menu">
+              <button type="button" id="loanDetailsEditBtn" data-i18n="editLoan">Edit</button>
+              <button type="button" id="loanDetailsDeleteBtn" data-i18n="deleteLoan">Delete</button>
+            </div>
+          </div>
         </div>
         <div class="loan-details-summary-card" id="loanDetailsSummaryCard">
           <!-- Rendered dynamically -->
@@ -470,6 +472,21 @@
       </div>
     </div>
 
+    <!-- TRANSACTION ACTIONS -->
+  <div class="floating-tab transaction-actions" id="transactionActionsModal">
+    <div class="ft-content-container">
+      <div class="wallets-header with-button">
+        <div class="wh-text" data-i18n="transactionActions">Transaction</div>
+        <button type="button" class="btn-secondary" id="closeTransactionActionsBtn" data-i18n="close">Close</button>
+      </div>
+      <div class="transaction-action-details" id="transactionActionDetails"></div>
+      <div class="transaction-action-buttons">
+        <button type="button" class="btn-primary" id="editSelectedTransactionBtn" data-i18n="editTransactionEntry">Edit transaction</button>
+        <button type="button" class="btn-danger" id="deleteSelectedTransactionBtn" data-i18n="deleteTransactionEntry">Delete transaction</button>
+      </div>
+    </div>
+  </div>
+    
     <!-- FLOATING TAB: ADD TRANSACTION -->
     <div class="floating-tab add-tranction" id="addTransactionModal">
       <div class="ft-content-container">
@@ -638,7 +655,7 @@
     <div class="floating-tab add-loan" id="addLoanModal">
       <div class="ft-content-container">
         <div class="wallets-header with-button">
-          <div class="wh-text" data-i18n="addLoan">Add Loan</div>
+          <div class="wh-text" id="loanModalTitle" data-i18n="addLoan">Add Loan</div>
           <button class="atr-save" id="saveLoanBtn" title="Save">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -833,6 +850,21 @@
           >
             History
           </button>
+        </div>
+        <div class="session-history-filters">
+          <input
+            type="search"
+            class="search-inp"
+            id="sessionHistorySearchInput"
+            placeholder="Search note or category..."
+            data-i18n="searchTransactions"
+          />
+          <div class="lc-in-out-selector-group">
+            <button type="button" class="selectable in" id="sessionHistoryInBtn" data-i18n="in">In</button>
+            <button type="button" class="selectable out" id="sessionHistoryOutBtn" data-i18n="out">Out</button>
+            <button type="button" class="selector catagory" id="sessionHistoryCategoryBtn" data-i18n="category">Category</button>
+          </div>
+          <div class="chip-container" id="sessionHistoryFilterChips"></div>
         </div>
         <div class="summary-details-container" id="sessionSummaryContent">
           <!-- Rendered dynamically -->

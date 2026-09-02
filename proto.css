@@ -1210,9 +1210,57 @@ button.selector {
   gap: 0.45em;
   flex-wrap: wrap;
 }
+
+.loan-detail-actions {
+  position: relative;
+  align-items: center;
+}
+
 .loan-detail-actions button {
   padding: 0.4em 0.6em;
 }
+
+.loan-actions-menu-btn {
+  width: 2.1em;
+  height: 2.1em;
+  padding: 0 !important;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background: rgba(var(--card-bg), 1);
+  color: rgba(var(--text-main), 1);
+  font-size: 1.05em;
+  line-height: 1;
+  cursor: pointer;
+}
+.loan-actions-menu {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 0.35em);
+  right: 0;
+  display: none;
+  min-width: 9em;
+  padding: 0.35em;
+  border: 1px solid var(--border-color);
+  border-radius: 0.75em;
+  background: rgba(var(--card-bg), 1);
+  box-shadow: 0 8px 22px var(--shadow-color);
+}
+.loan-actions-menu.active {
+  display: flex;
+  flex-direction: column;
+}
+.loan-actions-menu button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: rgba(var(--text-main), 1);
+  text-align: left;
+  cursor: pointer;
+}
+.loan-actions-menu button:hover {
+  background: rgba(var(--bg-color), 1);
+}
+
 .transaction-action-buttons {
   flex-direction: column;
   margin-top: 1em;

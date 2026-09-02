@@ -26,7 +26,13 @@ import {
   deleteCategory,
   updateSettings,
 } from "./core/entity-service.js";
-import { addLoan, addLoanRepayment, updateLoan, updateLoanRepayment, deleteLoan } from "./core/loan-service.js";
+import {
+  addLoan,
+  addLoanRepayment,
+  updateLoan,
+  updateLoanRepayment,
+  deleteLoan,
+} from "./core/loan-service.js";
 import { completeOnboarding } from "./core/onboarding-service.js";
 import {
   validateDatabase,
@@ -467,7 +473,8 @@ function setSessionWindowTab(tab) {
   historyTab?.classList.toggle("active", !isSummary);
   if (summary) summary.style.display = isSummary ? "block" : "none";
   if (history) history.style.display = isSummary ? "none" : "block";
-  if (historyFilters) historyFilters.style.display = isSummary ? "none" : "flex";
+  if (historyFilters)
+    historyFilters.style.display = isSummary ? "none" : "flex";
   if (!isSummary) renderSessionWindowHistory();
 }
 
@@ -485,7 +492,12 @@ async function renderSessionWindowHistory() {
     search: sessionHistoryFilters.search,
   });
   container.innerHTML = txs.length
-    ? txs.map((tx) => `<button type="button" class="session-history-entry" data-transaction-id="${Number(tx.id)}">${transactionDetailsMarkup(tx)}</button>`).join("")
+    ? txs
+        .map(
+          (tx) =>
+            `<button type="button" class="session-history-entry" data-transaction-id="${Number(tx.id)}">${transactionDetailsMarkup(tx)}</button>`,
+        )
+        .join("")
     : `<div class="empty-state">${locale("noTransactionsSession")}</div>`;
 
   // Rebind after using a string template, while keeping the renderer DOM-safe.
@@ -523,15 +535,19 @@ function transactionTypeText(type) {
 
 function transactionDetailsMarkup(tx, includeActionData = false) {
   const sym = data.settings.currencySymbol || "৳";
-  const sourceName = tx.source != null
-    ? data.wallets[tx.source]?.title || locale("wallet")
-    : "—";
-  const targetName = tx.target != null
-    ? data.wallets[tx.target]?.title || locale("wallet")
-    : "—";
+  const sourceName =
+    tx.source != null
+      ? data.wallets[tx.source]?.title || locale("wallet")
+      : "—";
+  const targetName =
+    tx.target != null
+      ? data.wallets[tx.target]?.title || locale("wallet")
+      : "—";
   const categoryName = tx.type === "income" ? "—" : tx.catagory || "—";
   const amount = `${transactionIsOut(tx) ? "-" : "+"}${sym}${formatNumber(tx.amount)}`;
-  const actionData = includeActionData ? ` data-transaction-id="${Number(tx.id)}"` : "";
+  const actionData = includeActionData
+    ? ` data-transaction-id="${Number(tx.id)}"`
+    : "";
   return `<div class="transaction-detail-content"${actionData}>
     <div class="transaction-detail-heading"><span>${escapeHtml(tx.note || transactionTypeText(tx.type))}</span><strong class="${transactionIsOut(tx) ? "out" : "in"}">${amount}</strong></div>
     <div class="transaction-detail-grid">
@@ -597,61 +613,108 @@ async function openTransactionActions(tx) {
 }
 
 function bindTransactionActions() {
-  document.getElementById("closeTransactionActionsBtn")?.addEventListener("click", () => {
-    closeSheet(document.getElementById("transactionActionsModal"));
-  });
-  document.getElementById("editSelectedTransactionBtn")?.addEventListener("click", async () => {
-    const tx = selectedTransactionId ? await db.transactions.get(selectedTransactionId) : null;
-    if (!tx || !canEditTransaction(tx)) return;
-    closeSheet(document.getElementById("transactionActionsModal"));
-    openEditTransactionModal(tx);
-  });
-  document.getElementById("deleteSelectedTransactionBtn")?.addEventListener("click", async () => {
-    const tx = selectedTransactionId ? await db.transactions.get(selectedTransactionId) : null;
-    if (!tx || !canEditTransaction(tx)) return;
-    if (!confirm(locale("deleteTransactionConfirm"))) return;
-    try {
-      await deleteTransaction(tx.id);
+  document
+    .getElementById("closeTransactionActionsBtn")
+    ?.addEventListener("click", () => {
       closeSheet(document.getElementById("transactionActionsModal"));
-      selectedTransactionId = null;
-    } catch (error) {
-      alert(error.message);
-    }
-  });
+    });
+  document
+    .getElementById("editSelectedTransactionBtn")
+    ?.addEventListener("click", async () => {
+      const tx = selectedTransactionId
+        ? await db.transactions.get(selectedTransactionId)
+        : null;
+      if (!tx || !canEditTransaction(tx)) return;
+      closeSheet(document.getElementById("transactionActionsModal"));
+      openEditTransactionModal(tx);
+    });
+  document
+    .getElementById("deleteSelectedTransactionBtn")
+    ?.addEventListener("click", async () => {
+      const tx = selectedTransactionId
+        ? await db.transactions.get(selectedTransactionId)
+        : null;
+      if (!tx || !canEditTransaction(tx)) return;
+      if (!confirm(locale("deleteTransactionConfirm"))) return;
+      try {
+        await deleteTransaction(tx.id);
+        closeSheet(document.getElementById("transactionActionsModal"));
+        selectedTransactionId = null;
+      } catch (error) {
+        alert(error.message);
+      }
+    });
 }
 
 function bindSessionHistoryFilters() {
-  document.getElementById("sessionHistorySearchInput")?.addEventListener("input", (event) => {
-    sessionHistoryFilters.search = event.target.value;
-    renderSessionWindowHistory();
-  });
-  document.getElementById("sessionHistoryInBtn")?.addEventListener("click", () => {
-    sessionHistoryFilters.types = sessionHistoryFilters.types.includes("income") ? [] : ["income"];
-    updateSessionHistoryFilterUI();
-    renderSessionWindowHistory();
-  });
-  document.getElementById("sessionHistoryOutBtn")?.addEventListener("click", () => {
-    sessionHistoryFilters.types = sessionHistoryFilters.types.includes("expense") ? [] : ["expense"];
-    updateSessionHistoryFilterUI();
-    renderSessionWindowHistory();
-  });
-  document.getElementById("sessionHistoryCategoryBtn")?.addEventListener("click", () => {
-    const options = [
-      { id: null, title: `${locale("all")} ${locale("categories")}` },
-      ...data.catagories.map((category) => ({ id: category, title: category })),
-    ];
-    showPicker(locale("selectCategory"), options, sessionHistoryFilters.categories, (selected, selectedIds) => {
-      sessionHistoryFilters.categories = selectedIds;
+  document
+    .getElementById("sessionHistorySearchInput")
+    ?.addEventListener("input", (event) => {
+      sessionHistoryFilters.search = event.target.value;
+      renderSessionWindowHistory();
+    });
+  document
+    .getElementById("sessionHistoryInBtn")
+    ?.addEventListener("click", () => {
+      sessionHistoryFilters.types = sessionHistoryFilters.types.includes(
+        "income",
+      )
+        ? []
+        : ["income"];
       updateSessionHistoryFilterUI();
       renderSessionWindowHistory();
-    }, document.getElementById("sessionHistoryCategoryBtn"), null, true);
-  });
+    });
+  document
+    .getElementById("sessionHistoryOutBtn")
+    ?.addEventListener("click", () => {
+      sessionHistoryFilters.types = sessionHistoryFilters.types.includes(
+        "expense",
+      )
+        ? []
+        : ["expense"];
+      updateSessionHistoryFilterUI();
+      renderSessionWindowHistory();
+    });
+  document
+    .getElementById("sessionHistoryCategoryBtn")
+    ?.addEventListener("click", () => {
+      const options = [
+        { id: null, title: `${locale("all")} ${locale("categories")}` },
+        ...data.catagories.map((category) => ({
+          id: category,
+          title: category,
+        })),
+      ];
+      showPicker(
+        locale("selectCategory"),
+        options,
+        sessionHistoryFilters.categories,
+        (selected, selectedIds) => {
+          sessionHistoryFilters.categories = selectedIds;
+          updateSessionHistoryFilterUI();
+          renderSessionWindowHistory();
+        },
+        document.getElementById("sessionHistoryCategoryBtn"),
+        null,
+        true,
+      );
+    });
   updateSessionHistoryFilterUI();
 }
 
 function updateSessionHistoryFilterUI() {
-  document.getElementById("sessionHistoryInBtn")?.classList.toggle("active", sessionHistoryFilters.types.includes("income"));
-  document.getElementById("sessionHistoryOutBtn")?.classList.toggle("active", sessionHistoryFilters.types.includes("expense"));
+  document
+    .getElementById("sessionHistoryInBtn")
+    ?.classList.toggle(
+      "active",
+      sessionHistoryFilters.types.includes("income"),
+    );
+  document
+    .getElementById("sessionHistoryOutBtn")
+    ?.classList.toggle(
+      "active",
+      sessionHistoryFilters.types.includes("expense"),
+    );
   const chips = document.getElementById("sessionHistoryFilterChips");
   if (!chips) return;
   chips.innerHTML = "";
@@ -661,7 +724,8 @@ function updateSessionHistoryFilterUI() {
     chip.className = "chip";
     chip.textContent = category;
     chip.addEventListener("click", () => {
-      sessionHistoryFilters.categories = sessionHistoryFilters.categories.filter((item) => item !== category);
+      sessionHistoryFilters.categories =
+        sessionHistoryFilters.categories.filter((item) => item !== category);
       updateSessionHistoryFilterUI();
       renderSessionWindowHistory();
     });
@@ -805,7 +869,11 @@ function bindSessionAndSettings() {
       async (selected) => {
         if (selected.id === "pin") {
           if (!(await configurePin())) return;
-          await updateSettings({ lockMode: "pin", pinLockEnabled: true, biometricCredentialId: "" });
+          await updateSettings({
+            lockMode: "pin",
+            pinLockEnabled: true,
+            biometricCredentialId: "",
+          });
         } else if (selected.id === "biometrics") {
           if (!window.PublicKeyCredential) {
             alert(locale("biometricUnsupported"));
@@ -973,7 +1041,11 @@ function getConfiguredLockMode() {
   if (["none", "pin", "biometrics", "both"].includes(storedMode)) {
     return storedMode;
   }
-  return data.settings.pinLockEnabled ? "pin" : data.settings.biometricCredentialId ? "biometrics" : "none";
+  return data.settings.pinLockEnabled
+    ? "pin"
+    : data.settings.biometricCredentialId
+      ? "biometrics"
+      : "none";
 }
 
 function updateSettingsLabels() {
@@ -991,14 +1063,15 @@ function updateSettingsLabels() {
     lockMode === "both"
       ? `${locale("pinCodeLabel")} + ${locale("biometricsShort")}`
       : lockMode === "biometrics"
-      ? `${locale("biometricsShort")} ☝️`
-      : lockMode === "pin"
-        ? `${locale("pinCodeLabel")} 🔒`
-        : locale("disabled");
+        ? `${locale("biometricsShort")} ☝️`
+        : lockMode === "pin"
+          ? `${locale("pinCodeLabel")} 🔒`
+          : locale("disabled");
   document.getElementById("settingsPinBtn").textContent = lockText;
   const changePinRow = document.getElementById("changePinRow");
   if (changePinRow)
-    changePinRow.style.display = data.settings.pinLockEnabled && data.settings.pinCode ? "flex" : "none";
+    changePinRow.style.display =
+      data.settings.pinLockEnabled && data.settings.pinCode ? "flex" : "none";
 }
 
 async function configurePin() {
@@ -1061,7 +1134,10 @@ function bindStarterPage() {
   if (!form || !protection) return;
 
   const updateProtectionFields = () => {
-    pinFields?.classList.toggle("active", ["pin", "both"].includes(protection.value));
+    pinFields?.classList.toggle(
+      "active",
+      ["pin", "both"].includes(protection.value),
+    );
   };
   protection.addEventListener("change", updateProtectionFields);
   language?.addEventListener("change", () => {
@@ -1643,12 +1719,12 @@ function openLoanDetailsModal(
       const row = document.createElement("div");
       row.className = "timeline-item-row";
       row.innerHTML = `
-        <div class="tl-icon">✓</div>
+        <div class="timeline-item-body"><div class="tl-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-icon lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
         <div class="tl-info">
           <div class="tl-date">${formatDate(tx.dateTime)}</div>
           <div class="tl-note">${escapeHtml(tx.note || wallName)} · ${escapeHtml(wallName)}</div>
         </div>
-        <div class="tl-amt">${loan.type === "borrowed" ? "-" : "+"}${sym}${formatNumber(tx.amount)}</div>
+        <div class="tl-amt">${loan.type === "borrowed" ? "-" : "+"}${sym}${formatNumber(tx.amount)}</div></div>
         <div class="timeline-actions">
           <button type="button" class="timeline-action timeline-edit" data-i18n="editRepayment">${locale("editRepayment")}</button>
           <button type="button" class="timeline-action timeline-delete" data-i18n="deleteRepayment">${locale("deleteRepayment")}</button>
@@ -1657,27 +1733,33 @@ function openLoanDetailsModal(
       row.querySelectorAll(".timeline-action").forEach((button) => {
         button.disabled = !canEditTransaction(tx);
       });
-      row.querySelector(".timeline-edit")?.addEventListener("click", async (event) => {
-        event.stopPropagation();
-        openEditRepaymentModal(loan, tx, personName);
-      });
-      row.querySelector(".timeline-delete")?.addEventListener("click", async (event) => {
-        event.stopPropagation();
-        if (!confirm(locale("deleteRepaymentConfirm"))) return;
-        try {
-          await deleteTransaction(tx.id);
-          await refreshLoanDetails(loan.id);
-        } catch (error) {
-          alert(error.message);
-        }
-      });
+      row
+        .querySelector(".timeline-edit")
+        ?.addEventListener("click", async (event) => {
+          event.stopPropagation();
+          openEditRepaymentModal(loan, tx, personName);
+        });
+      row
+        .querySelector(".timeline-delete")
+        ?.addEventListener("click", async (event) => {
+          event.stopPropagation();
+          if (!confirm(locale("deleteRepaymentConfirm"))) return;
+          try {
+            await deleteTransaction(tx.id);
+            await refreshLoanDetails(loan.id);
+          } catch (error) {
+            alert(error.message);
+          }
+        });
       timelineContainer.appendChild(row);
     });
   }
 
   const editLoanButton = document.getElementById("loanDetailsEditBtn");
   const deleteLoanButton = document.getElementById("loanDetailsDeleteBtn");
-  const recordRepaymentButton = document.getElementById("loanDetailsRecordRepaymentBtn");
+  const recordRepaymentButton = document.getElementById(
+    "loanDetailsRecordRepaymentBtn",
+  );
   if (editLoanButton) editLoanButton.disabled = !loanEditable;
   if (deleteLoanButton) deleteLoanButton.disabled = !loanEditable;
   if (recordRepaymentButton) recordRepaymentButton.disabled = remaining <= 0;
@@ -1707,13 +1789,24 @@ function openLoanDetailsModal(
 }
 
 async function refreshLoanDetails(loanId) {
-  const match = (await getLoans()).find(({ loan }) => Number(loan.id) === Number(loanId));
+  const match = (await getLoans()).find(
+    ({ loan }) => Number(loan.id) === Number(loanId),
+  );
   if (!match) {
     closeSheet(document.getElementById("loanDetailsModal"));
     return;
   }
-  const personName = data.persons.find((person) => Number(person.id) === Number(match.loan.personId))?.name || locale("person");
-  openLoanDetailsModal(match.loan, personName, match.remaining, match.totalRepaid, match.repayments);
+  const personName =
+    data.persons.find(
+      (person) => Number(person.id) === Number(match.loan.personId),
+    )?.name || locale("person");
+  openLoanDetailsModal(
+    match.loan,
+    personName,
+    match.remaining,
+    match.totalRepaid,
+    match.repayments,
+  );
 }
 
 function openEditLoanModal(loan) {
@@ -1728,7 +1821,8 @@ function openEditLoanModal(loan) {
   document.getElementById("loanAmountInput").value = loan.amount;
   document.getElementById("loanNoteInput").value = loan.note || "";
   setFormDateTime("loanDateTimeBtn", "loanDateTimeInput", loan.dateTime);
-  document.getElementById("loanModalTitle").textContent = locale("editLoanTitle");
+  document.getElementById("loanModalTitle").textContent =
+    locale("editLoanTitle");
   closeSheet(document.getElementById("loanDetailsModal"));
   updateFormSelectorLabels();
   openSheet(document.getElementById("addLoanModal"));
@@ -1741,10 +1835,15 @@ function openEditRepaymentModal(loan, transaction, personName) {
     loanId: Number(loan.id),
     walletId: Number(transaction.source),
   };
-  document.getElementById("repaymentModalTitle").textContent = `${locale("editRepaymentTitle")} (${personName})`;
+  document.getElementById("repaymentModalTitle").textContent =
+    `${locale("editRepaymentTitle")} (${personName})`;
   document.getElementById("repaymentAmountInput").value = transaction.amount;
   document.getElementById("repaymentNoteInput").value = transaction.note || "";
-  setFormDateTime("repaymentDateTimeBtn", "repaymentDateTimeInput", transaction.dateTime);
+  setFormDateTime(
+    "repaymentDateTimeBtn",
+    "repaymentDateTimeInput",
+    transaction.dateTime,
+  );
   closeSheet(document.getElementById("loanDetailsModal"));
   updateFormSelectorLabels();
   openSheet(document.getElementById("addRepaymentModal"));
@@ -1754,7 +1853,9 @@ function openRepaymentModal(loan, personName, remaining) {
   editingRepaymentId = null;
   editingLoanId = null;
   formRepaymentState.loanId = loan.id;
-  formRepaymentState.walletId = Number(selectedMainWalletId || data.settings.defaultWalletId || 1);
+  formRepaymentState.walletId = Number(
+    selectedMainWalletId || data.settings.defaultWalletId || 1,
+  );
   document.getElementById("repaymentModalTitle").textContent =
     `${locale("recordRepayment")} (${personName})`;
   document.getElementById("repaymentAmountInput").value = remaining;
@@ -2392,7 +2493,9 @@ function bindFormControls() {
       document.getElementById("repaymentAmountInput").value = "";
       document.getElementById("repaymentNoteInput").value = "";
       editingRepaymentId = null;
-      document.getElementById("repaymentModalTitle").textContent = locale("recordLoanRepayment");
+      document.getElementById("repaymentModalTitle").textContent = locale(
+        "recordLoanRepayment",
+      );
       closeSheet(document.getElementById("addRepaymentModal"));
     });
 }

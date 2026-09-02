@@ -41,7 +41,11 @@ export async function getLoans({ type = null, personId = null, includeDeleted = 
     .map((loan) => {
       const repayments = transactions.filter((transaction) => !transaction.isDeleted && Number(transaction.loanId) === Number(loan.id) && REPAYMENT_TYPES.has(transaction.type));
       const totalRepaid = repayments.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
-      return { loan, repayments, totalRepaid, remaining: Math.max(0, Number(loan.amount || 0) - totalRepaid) };
+      const remaining = Math.max(
+        0,
+        Math.round((Number(loan.amount || 0) - totalRepaid + Number.EPSILON) * 100) / 100,
+      );
+      return { loan, repayments, totalRepaid, remaining };
     })
     .sort((a, b) => new Date(b.loan.dateTime) - new Date(a.loan.dateTime));
 }

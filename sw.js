@@ -5,6 +5,7 @@ const ASSETS_TO_CACHE = [
   "./proto.css",
   "./manifest.json",
   "./asset/Manrope.ttf",
+  "./asset/icons/favicon.ico",
   "./asset/icons/192x192.png",
   "./asset/icons/512x512.png",
   "./js/main.js",
